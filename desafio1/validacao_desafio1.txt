@@ -1,0 +1,33 @@
+$ docker images meu-apache-packer
+IMAGE                      ID             DISK USAGE   CONTENT SIZE   EXTRA
+meu-apache-packer:latest   75d94801f0d9        405MB          118MB        
+
+$ docker run -d -p 8081:80 --name test-apache meu-apache-packer:latest
+ed5e4689ae1f82d09e9e52cfdf2f232942bb897f82083b418b5daa3e9003d30b
+
+$ curl.exe -i -s http://localhost:8081
+HTTP/1.1 200 OK
+Date: Tue, 17 Nov 2026 19:11:54 GMT
+Server: Apache/2.4.52 (Ubuntu)
+Last-Modified: Wed, 28 Oct 2026 14:43:04 GMT
+ETag: "ac7-65ee7949c6e00"
+Accept-Ranges: bytes
+Content-Length: 2759
+Vary: Accept-Encoding
+Content-Type: text/html
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+...
+  <main class="card">
+    <h1>Imagem Construída com HashiCorp Packer!</h1>
+    <div class="rule"></div>
+    <p>Servidor Apache provisionado e customizado de forma imutável.</p>
+    <p>Este arquivo foi injetado na imagem pelo provisioner <strong>file</strong>.</p>
+    <span class="badge" id="badge-desafio1">Desafio 1: meu-apache-packer</span>
+    <code>docker run -d -p 8081:80 meu-apache-packer:latest</code>
+  </main>
+...
+
+$ docker rm -f test-apache
+test-apache

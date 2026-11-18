@@ -1,0 +1,12 @@
+$ packer build .
+...
+--> dev-python.docker.python_base: Imported Docker image: sha256:86d13d7dab4a442c11d0989aa328fc1c19e7f5f49d0b2eafcf6d407e4fc1aa5b
+--> dev-python.docker.python_base: Imported Docker image: ambiente-dev-python:v1 with tags ambiente-dev-python:v1
+
+$ docker run --rm ambiente-dev-python:v1 python3 -m flask --version
+Python 3.10.12
+Flask 3.1.3
+Werkzeug 3.1.9
+
+$ docker run --rm ambiente-dev-python:v1 pwd
+/app

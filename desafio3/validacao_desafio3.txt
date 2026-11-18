@@ -1,0 +1,22 @@
+$ packer build .
+...
+==> dev-node.docker.node_base: Uploading package.json => /app/package.json
+==> dev-node.docker.node_base: Provisioning with shell script
+    dev-node.docker.node_base: up to date, audited 1 package in 6s
+    dev-node.docker.node_base: found 0 vulnerabilities
+==> dev-node.docker.node_base: Committing the container
+    dev-node.docker.node_base: Image ID: sha256:27b402fb574a4c1856e0ee5e8f45b566913bb977c5a412ae0199165c42249daf
+--> dev-node.docker.node_base: Imported Docker image: ambiente-node:v1 with tags ambiente-node:v1
+
+$ docker run --rm ambiente-node:v1 node -v
+v12.22.9
+
+$ docker run --rm ambiente-node:v1 npm -v
+8.5.1
+
+$ docker run --rm ambiente-node:v1 ls -la /app
+total 16
+drwxr-xr-x 2 root root 4096 Nov 18 00:44 .
+drwxr-xr-x 1 root root 4096 Nov 18 00:54 ..
+-rw-r--r-- 1 root root   82 Nov 18 00:44 package-lock.json
+-rw-rw-rw- 1 root root    3 Oct 28 14:43 package.json

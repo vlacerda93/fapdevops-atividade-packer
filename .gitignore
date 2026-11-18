@@ -1,0 +1,14 @@
+# Ignorar binários e arquivos compactados pesados no Git
+packer.exe
+*.zip
+Descomplicando_o_HashiCorp_Packer.pdf
+Atividade_Extraida/
+.packer.d/
+# Ignorar rascunhos duplicados soltos na raiz (os oficiais estão em desafio1/, desafio2/ e desafio3/)
+/desafio1.pkr.hcl
+/desafio2.pkr.hcl
+/desafio3.pkr.hcl
+/index.html
+/package.json
+/build.log
+

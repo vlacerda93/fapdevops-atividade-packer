@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório Técnico — Automação e Provisionamento de Imagens (Cloud-init &amp; HashiCorp Packer)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0E141B;
+      --bg-secondary: #121820;
+      --card-bg: #151F2A;
+      --card-elevated: #18222D;
+      --text-main: #E6EDF3;
+      --text-muted: #94A3B8;
+      --gold: #C5A059;
+      --gold-bright: #D4AF37;
+      --silver: #8C9BAE;
+      --silver-light: #CBD5E1;
+      --green-dark: #1B4332;
+      --green-focus: #2D6A4F;
+      --blue-deep: #1B4965;
+      --blue-cobalt: #2A6F97;
+      --ochre: #D99B26;
+      --terracotta: #B85D3B;
+      --border-subtle: rgba(140, 155, 174, 0.24);
+      --border-gold: rgba(197, 160, 89, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      background-image: radial-gradient(circle at 50% 0%, #18222D 0%, var(--bg-primary) 70%);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      padding: 36px 20px 64px;
+    }
+
+    .container {
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    /* Barra de Ação Superior */
+    .top-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 12px 18px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--green-dark);
+      border: 1px solid var(--green-focus);
+      color: #E6EDF3;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #52B788;
+      border-radius: 50%;
+    }
+
+    .btn-print {
+      background: linear-gradient(135deg, var(--gold) 0%, #B8860B 100%);
+      color: #0E141B;
+      border: 1px solid var(--gold-bright);
+      padding: 8px 16px;
+      border-radius: 5px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn-print:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(197, 160, 89, 0.25);
+    }
+
+    /* Cabeçalho Principal */
+    header.hero {
+      background: var(--card-bg);
+      border: 1px solid var(--border-gold);
+      border-top: 3px solid var(--gold);
+      border-radius: 8px;
+      padding: 36px 36px 30px;
+      margin-bottom: 32px;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+    }
+
+    .course-tag {
+      display: inline-block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    header.hero h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.95rem;
+      color: var(--text-main);
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    header.hero p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.98rem;
+      max-width: 820px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .meta-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--green-focus);
+      padding: 10px 14px;
+      border-radius: 5px;
+    }
+
+    .meta-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--silver);
+      display: block;
+    }
+
+    .meta-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-top: 2px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Títulos de Seção */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 36px 0 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-gold);
+    }
+
+    .section-number {
+      background: var(--green-dark);
+      border: 1px solid var(--green-focus);
+      color: var(--gold-bright);
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 4px 11px;
+      border-radius: 4px;
+    }
+
+    .section-header h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.38rem;
+      color: var(--gold);
+      letter-spacing: 0.4px;
+    }
+
+    /* Cartões de Conteúdo */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 7px;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .card-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+      color: var(--text-main);
+    }
+
+    .badge-green {
+      background: var(--green-dark);
+      border: 1px solid var(--green-focus);
+      color: #D8F3DC;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .badge-gold {
+      background: rgba(197, 160, 89, 0.14);
+      border: 1px solid var(--gold);
+      color: var(--gold-bright);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    /* Estrutura "Direto ao Ponto" */
+    .bullet-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bullet-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--gold);
+      padding: 12px 16px;
+      border-radius: 5px;
+    }
+
+    .bullet-box.green-accent {
+      border-left-color: var(--green-focus);
+    }
+
+    .bullet-box.blue-accent {
+      border-left-color: var(--blue-cobalt);
+    }
+
+    .bullet-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--gold);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .bullet-box.green-accent .bullet-label {
+      color: #74C69D;
+    }
+
+    .bullet-box.blue-accent .bullet-label {
+      color: #61A5C2;
+    }
+
+    .bullet-box p {
+      font-size: 0.93rem;
+      color: var(--text-main);
+    }
+
+    /* Tabela Comparativa */
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border: 1px solid var(--border-subtle);
+    }
+
+    th {
+      background: var(--card-elevated);
+      color: var(--gold);
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+      font-size: 0.86rem;
+      letter-spacing: 0.4px;
+    }
+
+    td {
+      background: var(--bg-secondary);
+      color: var(--text-main);
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td {
+      background: #141C25;
+    }
+
+    /* Blocos de Código e Terminal */
+    .code-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 820px) {
+      .code-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .code-panel {
+      background: #0B1016;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .code-panel-header {
+      background: var(--card-elevated);
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.77rem;
+      color: var(--silver-light);
+    }
+
+    .code-panel-header span.type {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    pre {
+      padding: 14px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #E2E8F0;
+    }
+
+    .cmd-prompt {
+      color: #74C69D;
+      font-weight: 600;
+    }
+
+    .cmd-success {
+      color: var(--gold-bright);
+      font-weight: 500;
+    }
+
+    footer {
+      margin-top: 40px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    /* Regras de Impressão / Exportação para PDF */
+    @media print {
+      body {
+        background: #F9F7F1 !important;
+        color: #1A202C !important;
+        padding: 0;
+      }
+      .top-actions {
+        display: none !important;
+      }
+      header.hero, .card, .meta-item, .bullet-box, td {
+        background: #FFFFFF !important;
+        color: #1A202C !important;
+        border-color: #CBD5E1 !important;
+        box-shadow: none !important;
+      }
+      header.hero h1, .card-title, .meta-value, .bullet-box p {
+        color: #1A202C !important;
+      }
+      .section-header h2, .course-tag, th {
+        color: #8A6621 !important;
+      }
+      .code-panel, pre {
+        background: #F5F3EC !important;
+        color: #1A202C !important;
+        border-color: #CBD5E1 !important;
+      }
+      .card {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-actions">
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span>3 Imagens Docker Construídas, Validadas e Auditadas via Packer</span>
+      </div>
+      <button class="btn-print" onclick="window.print()">Salvar / Imprimir em PDF (Ctrl+P)</button>
+    </div>
+
+    <header class="hero">
+      <span class="course-tag">Disciplina: Computação em Nuvem e Infraestrutura Ágil • FAPDEVOPS</span>
+      <h1>Automação e Provisionamento de Imagens Imutáveis</h1>
+      <p class="subtitle">
+        Estudo conceitual comparativo entre <strong>Cloud-init</strong> e <strong>HashiCorp Packer</strong> e implementação prática de três pipelines de <em>Golden Images</em> em contêineres Docker utilizando templates declarativos HCL (<code>.pkr.hcl</code>).
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">Ferramenta de Build</span>
+          <span class="meta-value">HashiCorp Packer v1.11.2</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Builder &amp; Plataforma</span>
+          <span class="meta-value">hashicorp/docker &gt;= 1.0.8</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Imagem Base Oficial</span>
+          <span class="meta-value">ubuntu:jammy (22.04 LTS)</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Status dos Testes</span>
+          <span class="meta-value">100% Aprovado (3/3)</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- PARTE 1: QUESTÕES CONCEITUAIS -->
+    <div class="section-header">
+      <span class="section-number">PARTE I</span>
+      <h2>Fundamentação Teórica: Cloud-init &amp; HashiCorp Packer</h2>
+    </div>
+
+    <!-- Questão 1 -->
+    <article class="card">
+      <div class="card-header">
+        <h3 class="card-title">1. O que é o Cloud-init? (Conceito, Propósito e Caso Prático)</h3>
+        <span class="badge-green">Bootstrapping / Run Time</span>
+      </div>
+      <div class="bullet-grid">
+        <div class="bullet-box green-accent">
+          <span class="bullet-label">O que é / Para que serve</span>
+          <p>
+            O <strong>Cloud-init</strong> é o padrão multiplataforma da indústria para inicialização e configuração automatizada de instâncias em nuvem durante o <strong>primeiro boot</strong> (<em>Zero-Touch Provisioning</em>). Ele funciona como um agente embutido na imagem do sistema operacional que lê metadados e scripts declarativos (<code>user-data</code> em YAML ou Shell) fornecidos pelo provedor (AWS, Azure, GCP, OpenStack) assim que a máquina virtual liga pela primeira vez.
+          </p>
+        </div>
+        <div class="bullet-box blue-accent">
+          <span class="bullet-label">Exemplo Prático na Nuvem</span>
+          <p>
+            Ao provisionar uma instância <strong>Amazon EC2</strong> via Terraform ou Console AWS, passamos um bloco <code>#cloud-config</code> no campo <code>user-data</code> que automaticamente: (1) cria o usuário da equipe de engenharia com permissão <code>sudo</code>, (2) injeta as chaves públicas SSH autorizadas, (3) formata e monta um volume EBS adicional em <code>/data</code> e (4) registra a instância em um agente de monitoramento (Prometheus Node Exporter) sem necessidade de nenhum acesso manual via SSH.
+          </p>
+        </div>
+        <div class="bullet-box">
+          <span class="bullet-label">Regra de Ouro no Mercado</span>
+          <p>
+            Ideal para <strong>parametrização de identidade única da máquina</strong> (hostname, IP estático, credenciais dinâmicas de cofre, registro em cluster Kubernetes) no momento em que a instância nasce.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Questão 2 -->
+    <article class="card">
+      <div class="card-header">
+        <h3 class="card-title">2. O que é o HashiCorp Packer? (Funcionamento e Problema Real que Resolve)</h3>
+        <span class="badge-gold">Baking / Build Time</span>
+      </div>
+      <div class="bullet-grid">
+        <div class="bullet-box green-accent">
+          <span class="bullet-label">O que é / Como funciona</span>
+          <p>
+            O <strong>HashiCorp Packer</strong> é uma ferramenta open-source de Infraestrutura como Código (IaC) que automatiza a criação de imagens de máquina idênticas e imutáveis (<em>Golden Images</em>) a partir de um único arquivo declarativo HCL (<code>.pkr.hcl</code>). Ele sobe uma instância ou contêiner temporário (<em>Builder</em>), executa scripts e copia arquivos para instalar pacotes e dependências (<em>Provisioners</em>), congela o estado final gerando o artefato e aplica tags/versões (<em>Post-Processors</em>), destruindo o ambiente provisório ao final.
+          </p>
+        </div>
+        <div class="bullet-box blue-accent">
+          <span class="bullet-label">Problema Real que Resolve em uma Empresa</span>
+          <p>
+            Em uma empresa de e-commerce durante um pico de tráfego (ex.: Black Friday), se o grupo de <em>Auto Scaling</em> tentar criar 30 novos servidores instalando tudo do zero no boot (Apache/Nginx, runtimes Python/Node, agentes de segurança e dependências via <code>apt</code> ou <code>npm</code>), cada máquina levará <strong>12 a 20 minutos</strong> para ficar pronta — e se um repositório externo oscilar, as novas instâncias falham. Com o <strong>Packer</strong>, a empresa aplica o conceito de <strong>Baking</strong>: a imagem já vem "assada" e testada com todo o stack pré-instalado, fazendo com que novas instâncias entrem em produção em <strong>menos de 15 segundos</strong> e com zero risco de <em>configuration drift</em>.
+          </p>
+        </div>
+      </div>
+    </article>
+
+    <!-- Questão 3 -->
+    <article class="card">
+      <div class="card-header">
+        <h3 class="card-title">3. Análise Comparativa: HashiCorp Packer (Golden Image) vs. Cloud-init</h3>
+        <span class="badge-green">Arquitetura Híbrida</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.92rem; margin-bottom: 10px;">
+        A diferença central está no <strong>momento do ciclo de vida da infraestrutura</strong> em que cada ferramenta atua: o Packer opera em <strong>tempo de construção (Build Time)</strong> gerando um molde imutável, enquanto o Cloud-init opera em <strong>tempo de inicialização (Run Time / First Boot)</strong> customizando a instância viva.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Critério Técnico</th>
+              <th>HashiCorp Packer (Baking / Golden Image)</th>
+              <th>Cloud-init (Bootstrapping / First Boot)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Momento de Execução</strong></td>
+              <td><strong>Build Time (Pré-Deploy):</strong> Executado na esteira de CI/CD antes de qualquer servidor subir em produção.</td>
+              <td><strong>Run Time (Primeiro Boot):</strong> Executado quando a máquina virtual é ligada pela primeira vez na nuvem.</td>
+            </tr>
+            <tr>
+              <td><strong>Artefato Gerado</strong></td>
+              <td>Gera uma <strong>imagem imutável</strong> (AWS AMI, Azure VHD, imagem Docker) pronta para ser replicada.</td>
+              <td>Configura uma <strong>instância específica em execução</strong> a partir de metadados (<code>user-data</code>).</td>
+            </tr>
+            <tr>
+              <td><strong>Velocidade de Escalonamento</strong></td>
+              <td><strong>Ultrarrápida (segundos):</strong> Os binários, bibliotecas e arquivos já estão gravados no disco da imagem.</td>
+              <td><strong>Mais lenta (minutos)</strong> caso seja usado para baixar pacotes pesados via rede a cada boot.</td>
+            </tr>
+            <tr>
+              <td><strong>Repetibilidade &amp; Segurança</strong></td>
+              <td>Garante 100% de paridade entre Dev, Stage e Prod; vulnerabilidades e testes são validados antes de publicar a imagem.</td>
+              <td>Suscetível a falhas de rede ou mudanças de versão de pacotes externos se instalar dependências em tempo real.</td>
+            </tr>
+            <tr>
+              <td><strong>Uso Combinado no Mercado</strong></td>
+              <td colspan="2">
+                <strong>Padrão Ouro DevOps:</strong> Usa-se o <strong>Packer</strong> para embutir 95% do peso estático (SO atualizado, hardening, runtime, servidor web, dependências) na <em>Golden Image</em>, e o <strong>Cloud-init</strong> apenas nos 5% finais dinâmicos que mudam de máquina para máquina (hostname, variáveis de ambiente de produção e chave de registro no cluster).
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <!-- PARTE 2: LABORATÓRIOS PRÁTICOS -->
+    <div class="section-header">
+      <span class="section-number">PARTE II</span>
+      <h2>Laboratórios Práticos: Infraestrutura Imutável com Packer &amp; Docker</h2>
+    </div>
+
+    <!-- Desafio 1 -->
+    <article class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Atividade 1: Servidor Web Apache com Injeção de Arquivo Local</h3>
+          <p style="color: var(--text-muted); font-size: 0.86rem; margin-top: 3px;">
+            Diretório: <code>desafio1/</code> • Imagem gerada: <code>meu-apache-packer:latest</code> (ID: <code>75d94801f0d9</code>)
+          </p>
+        </div>
+        <span class="badge-green">Nível Iniciante • Validado</span>
+      </div>
+
+      <div class="bullet-grid" style="margin-bottom: 14px;">
+        <div class="bullet-box green-accent">
+          <span class="bullet-label">Arquitetura da Receita &amp; Ordem dos Provisioners</span>
+          <p>
+            Partindo da imagem base <code>ubuntu:jammy</code> com metadados <code>EXPOSE 80</code> e <code>CMD ["apachectl", "-D", "FOREGROUND"]</code> no bloco <code>changes</code>, o primeiro provisioner (<code>shell</code>) instala o pacote <code>apache2</code> — garantindo a criação do diretório <code>/var/www/html/</code>. Só então o segundo provisioner (<code>file</code>) injeta o <code>index.html</code> local para dentro da imagem, finalizando com o <code>post-processor "docker-tag"</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="code-grid">
+        <div class="code-panel">
+          <div class="code-panel-header">
+            <span>desafio1/desafio1.pkr.hcl</span>
+            <span class="type">HCL Template</span>
+          </div>
+          <pre>packer {
+  required_plugins {
+    docker = {
+      version = "&gt;= 1.0.8"
+      source  = "github.com/hashicorp/docker"
+    }
+  }
+}
+
+source "docker" "ubuntu" {
+  image  = "ubuntu:jammy"
+  commit = true
+  changes = [
+    "EXPOSE 80",
+    "CMD [\"apachectl\", \"-D\", \"FOREGROUND\"]"
+  ]
+}
+
+build {
+  name    = "meu-apache"
+  sources = ["source.docker.ubuntu"]
+
+  provisioner "shell" {
+    inline = [
+      "apt-get update",
+      "DEBIAN_FRONTEND=noninteractive apt-get install -y apache2",
+      "apt-get clean"
+    ]
+  }
+
+  provisioner "file" {
+    source      = "index.html"
+    destination = "/var/www/html/index.html"
+  }
+
+  post-processor "docker-tag" {
+    repository = "meu-apache-packer"
+    tags       = ["latest"]
+  }
+}</pre>
+        </div>
+
+        <div class="code-panel">
+          <div class="code-panel-header">
+            <span>Evidência de Build &amp; Teste HTTP (Porta 8081)</span>
+            <span class="type">Terminal Output</span>
+          </div>
+          <pre><span class="cmd-prompt">$ packer init . &amp;&amp; packer validate . &amp;&amp; packer build .</span>
+==&gt; meu-apache.docker.ubuntu: Provisioning with shell script...
+==&gt; meu-apache.docker.ubuntu: Uploading index.html =&gt; /var/www/html/index.html
+==&gt; meu-apache.docker.ubuntu: Running post-processor: (type docker-tag)
+<span class="cmd-success">--&gt; meu-apache.docker.ubuntu: Imported Docker image: meu-apache-packer:latest</span>
+
+<span class="cmd-prompt">$ docker images meu-apache-packer</span>
+IMAGE                      ID             DISK USAGE   CONTENT SIZE
+meu-apache-packer:latest   75d94801f0d9   405MB        118MB
+
+<span class="cmd-prompt">$ docker run -d -p 8081:80 --name test-apache meu-apache-packer:latest</span>
+ed5e4689ae1f82d09e9e52cfdf2f232942bb897f82083b418b5daa3e9003d30b
+
+<span class="cmd-prompt">$ curl.exe -i -s http://localhost:8081</span>
+<span class="cmd-success">HTTP/1.1 200 OK
+Server: Apache/2.4.52 (Ubuntu)
+Content-Length: 2759
+Content-Type: text/html</span>
+
+&lt;h1&gt;Imagem Construída com HashiCorp Packer!&lt;/h1&gt;
+&lt;span class="badge"&gt;Desafio 1: meu-apache-packer&lt;/span&gt;
+
+<span class="cmd-prompt">$ docker rm -f test-apache</span>
+test-apache</pre>
+        </div>
+      </div>
+    </article>
+
+    <!-- Desafio 2 -->
+    <article class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Atividade 2: Ambiente Base Padronizado para Python + Flask</h3>
+          <p style="color: var(--text-muted); font-size: 0.86rem; margin-top: 3px;">
+            Diretório: <code>desafio2/</code> • Imagem gerada: <code>ambiente-dev-python:v1</code> (ID: <code>86d13d7dab4a</code>)
+          </p>
+        </div>
+        <span class="badge-green">Nível Intermediário • Validado</span>
+      </div>
+
+      <div class="bullet-grid" style="margin-bottom: 14px;">
+        <div class="bullet-box green-accent">
+          <span class="bullet-label">Decisões Técnicas &amp; Otimização de Imagem</span>
+          <p>
+            Definido o diretório padrão de trabalho <code>WORKDIR /app</code> via atributo <code>changes</code> do builder Docker. Na instalação via <code>apt-get</code>, foi aplicada a flag <code>--no-install-recommends</code> junto com <code>pip install --no-cache-dir Flask</code> e <code>apt-get clean</code>, evitando o download de mais de 340 MB de compiladores C/C++ desnecessários e mantendo a imagem enxuta.
+          </p>
+        </div>
+      </div>
+
+      <div class="code-grid">
+        <div class="code-panel">
+          <div class="code-panel-header">
+            <span>desafio2/desafio2.pkr.hcl</span>
+            <span class="type">HCL Template</span>
+          </div>
+          <pre>packer {
+  required_plugins {
+    docker = {
+      version = "&gt;= 1.0.8"
+      source  = "github.com/hashicorp/docker"
+    }
+  }
+}
+
+source "docker" "python_base" {
+  image  = "ubuntu:jammy"
+  commit = true
+  changes = [
+    "WORKDIR /app"
+  ]
+}
+
+build {
+  name    = "dev-python"
+  sources = ["source.docker.python_base"]
+
+  provisioner "shell" {
+    inline = [
+      "apt-get update",
+      "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 python3-pip ca-certificates",
+      "mkdir -p /app",
+      "pip install --no-cache-dir Flask",
+      "apt-get clean"
+    ]
+  }
+
+  post-processor "docker-tag" {
+    repository = "ambiente-dev-python"
+    tags       = ["v1"]
+  }
+}</pre>
+        </div>
+
+        <div class="code-panel">
+          <div class="code-panel-header">
+            <span>Evidência de Build &amp; Validação Oficial do PDF</span>
+            <span class="type">Terminal Output</span>
+          </div>
+          <pre><span class="cmd-prompt">$ packer build .</span>
+==&gt; dev-python.docker.python_base: Installing collected packages:
+    markupsafe, itsdangerous, click, blinker, werkzeug, jinja2, Flask
+==&gt; dev-python.docker.python_base: Successfully installed Flask-3.1.3
+==&gt; dev-python.docker.python_base: Committing the container
+    Image ID: sha256:86d13d7dab4a442c11d0989aa328fc1c19e7f5f49d0b2eafcf6d407e4fc1aa5b
+<span class="cmd-success">--&gt; dev-python.docker.python_base: Imported Docker image:
+    ambiente-dev-python:v1 with tags ambiente-dev-python:v1</span>
+
+<span class="cmd-prompt">$ docker run --rm ambiente-dev-python:v1 python3 -m flask --version</span>
+<span class="cmd-success">Python 3.10.12
+Flask 3.1.3
+Werkzeug 3.1.9</span>
+
+<span class="cmd-prompt">$ docker run --rm ambiente-dev-python:v1 pwd</span>
+<span class="cmd-success">/app</span></pre>
+        </div>
+      </div>
+    </article>
+
+    <!-- Desafio 3 -->
+    <article class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Atividade 3: Ambiente Node.js com Pipeline em Múltiplos Passos</h3>
+          <p style="color: var(--text-muted); font-size: 0.86rem; margin-top: 3px;">
+            Diretório: <code>desafio3/</code> • Imagem gerada: <code>ambiente-node:v1</code> (ID: <code>27b402fb574a</code>)
+          </p>
+        </div>
+        <span class="badge-green">Nível Intermediário • Validado</span>
+      </div>
+
+      <div class="bullet-grid" style="margin-bottom: 14px;">
+        <div class="bullet-box green-accent">
+          <span class="bullet-label">Encadeamento Sequencial de Provisioners</span>
+          <p>
+            Demonstra a execução determinística em três estágios: (1) provisioner <code>shell</code> instala <code>nodejs</code> e <code>npm</code> e cria o diretório <code>/app</code>; (2) provisioner <code>file</code> transfere o arquivo local <code>package.json</code> (contendo <code>{}</code>) para <code>/app/package.json</code>; e (3) segundo provisioner <code>shell</code> executa <code>cd /app &amp;&amp; npm install</code>, gerando o <code>package-lock.json</code> auditado dentro da imagem imutável.
+          </p>
+        </div>
+      </div>
+
+      <div class="code-grid">
+        <div class="code-panel">
+          <div class="code-panel-header">
+            <span>desafio3/desafio3.pkr.hcl</span>
+            <span class="type">HCL Template</span>
+          </div>
+          <pre>packer {
+  required_plugins {
+    docker = {
+      version = "&gt;= 1.0.8"
+      source  = "github.com/hashicorp/docker"
+    }
+  }
+}
+
+source "docker" "node_base" {
+  image  = "ubuntu:jammy"
+  commit = true
+}
+
+build {
+  name    = "dev-node"
+  sources = ["source.docker.node_base"]
+
+  provisioner "shell" {
+    inline = [
+      "apt-get update",
+      "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs npm ca-certificates",
+      "mkdir -p /app",
+      "apt-get clean"
+    ]
+  }
+
+  provisioner "file" {
+    source      = "package.json"
+    destination = "/app/package.json"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "cd /app &amp;&amp; npm install"
+    ]
+  }
+
+  post-processor "docker-tag" {
+    repository = "ambiente-node"
+    tags       = ["v1"]
+  }
+}</pre>
+        </div>
+
+        <div class="code-panel">
+          <div class="code-panel-header">
+            <span>Evidência de Build &amp; Auditoria do /app</span>
+            <span class="type">Terminal Output</span>
+          </div>
+          <pre><span class="cmd-prompt">$ packer build .</span>
+==&gt; dev-node.docker.node_base: Uploading package.json =&gt; /app/package.json
+==&gt; dev-node.docker.node_base: Provisioning with shell script
+    up to date, audited 1 package in 6s
+    found 0 vulnerabilities
+==&gt; dev-node.docker.node_base: Committing the container
+    Image ID: sha256:27b402fb574a4c1856e0ee5e8f45b566913bb977c5a412ae0199165c42249daf
+<span class="cmd-success">--&gt; dev-node.docker.node_base: Imported Docker image:
+    ambiente-node:v1 with tags ambiente-node:v1</span>
+
+<span class="cmd-prompt">$ docker run --rm ambiente-node:v1 node -v</span>
+<span class="cmd-success">v12.22.9</span>
+
+<span class="cmd-prompt">$ docker run --rm ambiente-node:v1 npm -v</span>
+<span class="cmd-success">8.5.1</span>
+
+<span class="cmd-prompt">$ docker run --rm ambiente-node:v1 ls -la /app</span>
+<span class="cmd-success">-rw-r--r-- 1 root root 82 Nov 18 00:44 package-lock.json
+-rw-rw-rw- 1 root root  3 Oct 28 14:43 package.json</span></pre>
+        </div>
+      </div>
+    </article>
+
+    <footer>
+      <span>Atividade Prática — Computação em Nuvem e Infraestrutura Ágil (FAPDEVOPS)</span>
+      <span>HashiCorp Packer &amp; Cloud-init • Infraestrutura Imutável</span>
+    </footer>
+  </div>
+</body>
+</html>
