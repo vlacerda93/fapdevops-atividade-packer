@@ -1,6 +1,7 @@
 # Automação e Provisionamento de Imagens: Cloud-init & HashiCorp Packer
 
 > **Disciplina:** Computação em Nuvem e Infraestrutura Ágil (FAPDEVOPS)  
+> **Repositório Oficial:** [https://github.com/vlacerda93/fapdevops-atividade-packer](https://github.com/vlacerda93/fapdevops-atividade-packer)  
 > **Ferramentas:** HashiCorp Packer v1.11.2 • Docker Engine • Ubuntu 22.04 LTS (`ubuntu:jammy`)  
 > **Relatório Visual Completo (HTML/PDF):** [`RELATORIO_FINAL_PACKER.html`](./RELATORIO_FINAL_PACKER.html)
 
